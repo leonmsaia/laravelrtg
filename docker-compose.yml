@@ -1,0 +1,102 @@
+version: '3'
+services:
+  ####################################################################################################
+  # LARAVEL
+  # PHP AND NGINX
+  ####################################################################################################
+  laravel:
+    container_name: ${PHP_CONTAINER_NAME}
+    build:
+      context: .
+      dockerfile: .docker/laravel/Dockerfile
+    ports:
+      - "${LARAVEL_PORT}:8000"
+    volumes:
+      - "${LARAVEL_DIR}:/var/www/html"
+    depends_on:
+      - ${MYSQL_CONTAINER_NAME}
+      - ${REDIS_CONTAINER_NAME}
+    environment:
+      DB_HOST: ${LARAVEL_DB_HOST}
+      DB_PORT: ${LARAVEL_DB_PORT}
+      REDIS_HOST: ${LARAVEL_REDIS_HOST}
+      REDIS_PORT: ${LARAVEL_REDIS_PORT}
+    networks:
+      - app_network
+
+  ####################################################################################################
+  # MYSQL
+  ####################################################################################################
+  mysql:
+    container_name: ${MYSQL_CONTAINER_NAME}
+    build:
+      context: .
+      dockerfile: .docker/mysql/Dockerfile
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - "${MYSQL_DIR}:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - app_network
+
+  ####################################################################################################
+  # REDIS
+  ####################################################################################################
+  redis:
+    container_name: ${REDIS_CONTAINER_NAME}
+    build:
+      context: .
+      dockerfile: .docker/redis/Dockerfile
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - "${REDIS_DIR}:/data"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks:
+      - app_network
+  
+  ####################################################################################################
+  # NGINX
+  ####################################################################################################
+  nginx:
+    container_name: ${NGINX_CONTAINER_NAME}
+    build: ./.docker/nginx/
+    ports:
+      - "${NGINX_PORT}:80"
+    depends_on:
+      - ${PHP_CONTAINER_NAME}
+    environment:
+      PHP_UPSTREAM: ${NGINX_PHP_UPSTREAM}
+    networks:
+      - app_network
+  
+  ####################################################################################################
+  # PHPMYADMIN
+  ####################################################################################################
+  phpmyadmin:
+    container_name: ${PHPMYADMIN_CONTAINER_NAME}
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "${PHPMYADMIN_PORT}:80"
+    links:
+      - ${MYSQL_CONTAINER_NAME}
+    environment:
+      PMA_HOST: ${PHPMYADMIN_DB_HOST}
+      PMA_PORT: ${PHPMYADMIN_DB_PORT}
+      PMA_ARBITRARY: 1
+    volumes:
+      - "${PHPMYADMIN_DIR}:/sessions"
+    networks:
+      - app_network
+
+####################################################################################################
+# NETWORKS
+####################################################################################################
+networks:
+  app_network:
